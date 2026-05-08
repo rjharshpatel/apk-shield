@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APK Shield — Malware Detector</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0a0c10;
+    --bg2:       #0f1117;
+    --bg3:       #151820;
+    --border:    rgba(255,255,255,0.07);
+    --accent:    #00e5a0;
+    --accent2:   #0066ff;
+    --danger:    #ff3b5c;
+    --warn:      #ffaa00;
+    --text:      #e8ecf0;
+    --muted:     #6b7280;
+    --mono:      'Space Mono', monospace;
+    --sans:      'Syne', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* grid bg */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,160,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,160,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  /* ── HEADER ── */
+  header { text-align: center; margin-bottom: 3rem; padding-top: 1rem; }
+
+  .logo {
+    display: inline-flex; align-items: center; gap: 12px;
+    margin-bottom: 1.5rem;
+  }
+  .logo-icon {
+    width: 48px; height: 48px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  .logo-text {
+    font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em;
+    background: linear-gradient(90deg, var(--accent), #fff);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+
+  header h1 { font-size: clamp(2rem, 5vw, 3rem); font-weight: 800; line-height: 1.1; margin-bottom: .75rem; }
+  header h1 span { color: var(--accent); }
+  header p { color: var(--muted); font-size: .95rem; font-family: var(--mono); }
+
+  /* ── UPLOAD ZONE ── */
+  .upload-card {
+    background: var(--bg2);
+    border: 1.5px dashed var(--border);
+    border-radius: 20px;
+    padding: 3rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .3s, background .3s;
+    position: relative;
+    margin-bottom: 1.5rem;
+  }
+  .upload-card:hover, .upload-card.drag { border-color: var(--accent); background: rgba(0,229,160,.04); }
+  .upload-card input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+
+  .upload-icon { font-size: 3rem; margin-bottom: 1rem; display: block; }
+  .upload-card h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: .5rem; }
+  .upload-card p { color: var(--muted); font-size: .85rem; font-family: var(--mono); }
+  .upload-badge {
+    display: inline-block; margin-top: 1rem;
+    background: rgba(0,229,160,.1); color: var(--accent);
+    border: 1px solid rgba(0,229,160,.3);
+    border-radius: 999px; padding: .3rem .9rem;
+    font-size: .75rem; font-family: var(--mono);
+  }
+
+  /* ── SELECTED FILE ── */
+  #selected-file {
+    display: none;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+    display: none;
+    align-items: center;
+    gap: 12px;
+  }
+  #selected-file .file-icon { font-size: 1.8rem; }
+  #selected-file .file-info { flex: 1; }
+  #selected-file .file-name { font-weight: 600; font-size: .95rem; }
+  #selected-file .file-size { color: var(--muted); font-size: .8rem; font-family: var(--mono); }
+  #selected-file .clear-btn {
+    background: none; border: 1px solid rgba(255,59,92,.3);
+    color: var(--danger); border-radius: 8px;
+    padding: .3rem .7rem; cursor: pointer; font-size: .75rem;
+    transition: background .2s;
+  }
+  #selected-file .clear-btn:hover { background: rgba(255,59,92,.1); }
+
+  /* ── SCAN BUTTON ── */
+  #scan-btn {
+    width: 100%; padding: 1rem;
+    background: linear-gradient(135deg, var(--accent), #00bfff);
+    color: #000; font-family: var(--sans);
+    font-weight: 700; font-size: 1rem; letter-spacing: .05em;
+    border: none; border-radius: 14px; cursor: pointer;
+    transition: opacity .2s, transform .15s;
+    margin-bottom: 2.5rem;
+    display: none;
+  }
+  #scan-btn:hover { opacity: .9; transform: translateY(-1px); }
+  #scan-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+  /* ── LOADING ── */
+  #loading {
+    display: none; text-align: center; padding: 3rem;
+    background: var(--bg2); border-radius: 20px; margin-bottom: 2rem;
+  }
+  .scan-anim {
+    width: 80px; height: 80px; margin: 0 auto 1.5rem;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    border-top-color: var(--accent);
+    border-right-color: var(--accent2);
+    animation: spin 1s linear infinite;
+    position: relative;
+  }
+  .scan-anim::before {
+    content: '🛡';
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    font-size: 1.8rem; animation: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loading h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: .5rem; }
+  #loading p { color: var(--muted); font-family: var(--mono); font-size: .8rem; }
+  .loading-steps { margin-top: 1.5rem; }
+  .step {
+    display: flex; align-items: center; gap: .75rem;
+    padding: .4rem 0; font-size: .82rem; color: var(--muted);
+    font-family: var(--mono); opacity: 0;
+    transition: opacity .4s;
+  }
+  .step.active { opacity: 1; color: var(--accent); }
+  .step-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+  /* ── RESULT ── */
+  #result { display: none; animation: fadeUp .5s ease; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* verdict card */
+  .verdict-card {
+    border-radius: 20px; padding: 2rem;
+    margin-bottom: 1.5rem;
+    position: relative; overflow: hidden;
+  }
+  .verdict-card.benign {
+    background: rgba(0,229,160,.06);
+    border: 1.5px solid rgba(0,229,160,.3);
+  }
+  .verdict-card.malware {
+    background: rgba(255,59,92,.06);
+    border: 1.5px solid rgba(255,59,92,.3);
+  }
+  .verdict-card::after {
+    content: '';
+    position: absolute; top: -40px; right: -40px;
+    width: 160px; height: 160px; border-radius: 50%;
+    opacity: .06;
+  }
+  .verdict-card.benign::after { background: var(--accent); }
+  .verdict-card.malware::after { background: var(--danger); }
+
+  .verdict-top { display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem; }
+  .verdict-icon { font-size: 3.5rem; line-height: 1; }
+  .verdict-label { font-size: 2rem; font-weight: 800; letter-spacing: -.02em; }
+  .verdict-card.benign .verdict-label { color: var(--accent); }
+  .verdict-card.malware .verdict-label { color: var(--danger); }
+  .verdict-sub { color: var(--muted); font-family: var(--mono); font-size: .82rem; margin-top: .25rem; }
+
+  /* confidence bar */
+  .conf-row { display: flex; align-items: center; gap: 12px; margin-top: .5rem; }
+  .conf-label { font-size: .8rem; color: var(--muted); font-family: var(--mono); width: 75px; flex-shrink: 0; }
+  .conf-bar { flex: 1; height: 8px; background: rgba(255,255,255,.08); border-radius: 999px; overflow: hidden; }
+  .conf-fill {
+    height: 100%; border-radius: 999px;
+    transition: width 1s cubic-bezier(.4,0,.2,1);
+    width: 0;
+  }
+  .benign .conf-fill { background: linear-gradient(90deg, var(--accent), #00bfff); }
+  .malware .conf-fill { background: linear-gradient(90deg, var(--warn), var(--danger)); }
+  .conf-pct { font-size: .82rem; font-family: var(--mono); font-weight: 700; width: 44px; text-align: right; }
+
+  /* risk badge */
+  .risk-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: .3rem .9rem; border-radius: 999px;
+    font-size: .78rem; font-family: var(--mono); font-weight: 700;
+    margin-top: .75rem;
+  }
+  .risk-Low    { background: rgba(0,229,160,.15); color: var(--accent); }
+  .risk-Medium { background: rgba(255,170,0,.15); color: var(--warn); }
+  .risk-High   { background: rgba(255,59,92,.15);  color: var(--danger); }
+  .risk-Critical{ background: rgba(255,59,92,.25); color: var(--danger); border: 1px solid rgba(255,59,92,.4); }
+
+  /* ── STATS GRID ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px; margin-bottom: 1.5rem;
+  }
+  .stat {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 14px; padding: 1rem;
+    text-align: center;
+  }
+  .stat-val { font-size: 1.6rem; font-weight: 800; }
+  .stat-lbl { color: var(--muted); font-size: .75rem; font-family: var(--mono); margin-top: .25rem; }
+
+  /* ── SECTIONS ── */
+  .section {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 16px; padding: 1.25rem 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+  .section-title {
+    font-size: .72rem; font-family: var(--mono);
+    color: var(--muted); letter-spacing: .12em;
+    text-transform: uppercase; margin-bottom: 1rem;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* permission pills */
+  .perm-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .perm-pill {
+    padding: .3rem .75rem; border-radius: 8px;
+    font-size: .75rem; font-family: var(--mono);
+    border: 1px solid;
+  }
+  .perm-safe    { background: rgba(0,229,160,.08); color: var(--accent);  border-color: rgba(0,229,160,.2); }
+  .perm-danger  { background: rgba(255,59,92,.1);  color: var(--danger);  border-color: rgba(255,59,92,.25); }
+  .perm-empty   { color: var(--muted); font-size: .85rem; font-family: var(--mono); }
+
+  /* apk info table */
+  .info-table { width: 100%; border-collapse: collapse; }
+  .info-table td {
+    padding: .5rem 0; font-size: .85rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .info-table tr:last-child td { border-bottom: none; }
+  .info-table td:first-child { color: var(--muted); font-family: var(--mono); width: 45%; }
+  .info-table td:last-child { font-weight: 600; text-align: right; }
+
+  /* model note */
+  .model-note {
+    background: rgba(0,102,255,.08); border: 1px solid rgba(0,102,255,.2);
+    border-radius: 10px; padding: .75rem 1rem;
+    font-size: .78rem; font-family: var(--mono); color: #6aabff;
+    margin-bottom: 1.25rem; display: flex; gap: 8px; align-items: center;
+  }
+
+  /* scan again btn */
+  #scan-again {
+    width: 100%; padding: .85rem;
+    background: var(--bg3); color: var(--text);
+    border: 1px solid var(--border); border-radius: 12px;
+    font-family: var(--sans); font-weight: 600; font-size: .95rem;
+    cursor: pointer; transition: border-color .2s, background .2s;
+    margin-top: .5rem;
+  }
+  #scan-again:hover { border-color: var(--accent); background: rgba(0,229,160,.04); }
+
+  /* footer */
+  footer { text-align: center; margin-top: 3rem; color: var(--muted); font-size: .78rem; font-family: var(--mono); }
+  footer span { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🛡</div>
+      <div class="logo-text">APK Shield</div>
+    </div>
+    <h1>Detect <span>Malware</span><br>Before It Strikes</h1>
+    <p>// ML-powered Android APK analysis engine</p>
+  </header>
+
+  <!-- UPLOAD -->
+  <div class="upload-card" id="drop-zone">
+    <input type="file" id="file-input" accept=".apk">
+    <span class="upload-icon">📦</span>
+    <h2>Drop your APK here</h2>
+    <p>or click to browse your files</p>
+    <span class="upload-badge">Supports .apk files up to 100MB</span>
+  </div>
+
+  <!-- SELECTED FILE -->
+  <div id="selected-file">
+    <span class="file-icon">📱</span>
+    <div class="file-info">
+      <div class="file-name" id="sel-name">—</div>
+      <div class="file-size" id="sel-size">—</div>
+    </div>
+    <button class="clear-btn" onclick="clearFile()">✕ Remove</button>
+  </div>
+
+  <!-- SCAN BTN -->
+  <button id="scan-btn" onclick="scanAPK()">⚡ Scan for Malware</button>
+
+  <!-- LOADING -->
+  <div id="loading">
+    <div class="scan-anim"></div>
+    <h3>Analysing APK...</h3>
+    <p>Running ML classification pipeline</p>
+    <div class="loading-steps">
+      <div class="step" id="s1"><span class="step-dot"></span> Parsing APK structure...</div>
+      <div class="step" id="s2"><span class="step-dot"></span> Extracting AndroidManifest.xml...</div>
+      <div class="step" id="s3"><span class="step-dot"></span> Detecting permissions & API calls...</div>
+      <div class="step" id="s4"><span class="step-dot"></span> Running Random Forest classifier...</div>
+      <div class="step" id="s5"><span class="step-dot"></span> Generating risk report...</div>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div id="result">
+
+    <div class="model-note" id="model-note" style="display:none">
+      ⚡ Prediction by trained ML model (Random Forest / XGBoost)
+    </div>
+    <div class="model-note" id="heuristic-note" style="display:none; background:rgba(255,170,0,.08); border-color:rgba(255,170,0,.2); color:#ffc76a;">
+      ⚠ Heuristic analysis used — ML model not loaded. Load malware_model.pkl for full accuracy.
+    </div>
+
+    <!-- VERDICT -->
+    <div class="verdict-card" id="verdict-card">
+      <div class="verdict-top">
+        <div class="verdict-icon" id="v-icon">—</div>
+        <div>
+          <div class="verdict-label" id="v-label">—</div>
+          <div class="verdict-sub" id="v-sub">—</div>
+        </div>
+      </div>
+
+      <div class="conf-row">
+        <div class="conf-label">Benign</div>
+        <div class="conf-bar"><div class="conf-fill" id="bar-benign"></div></div>
+        <div class="conf-pct" id="pct-benign">0%</div>
+      </div>
+      <div class="conf-row" style="margin-top:6px;">
+        <div class="conf-label">Malware</div>
+        <div class="conf-bar">
+          <div class="conf-fill" style="background:linear-gradient(90deg,#ffaa00,#ff3b5c);" id="bar-malware"></div>
+        </div>
+        <div class="conf-pct" id="pct-malware">0%</div>
+      </div>
+
+      <div><span class="risk-badge" id="risk-badge">—</span></div>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats-grid">
+      <div class="stat">
+        <div class="stat-val" id="stat-perms">—</div>
+        <div class="stat-lbl">Permissions</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" id="stat-danger">—</div>
+        <div class="stat-lbl">Dangerous Perms</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" id="stat-files">—</div>
+        <div class="stat-lbl">Files in APK</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" id="stat-dex">—</div>
+        <div class="stat-lbl">DEX Files</div>
+      </div>
+    </div>
+
+    <!-- APK INFO -->
+    <div class="section">
+      <div class="section-title">APK Info</div>
+      <table class="info-table">
+        <tr><td>File name</td><td id="inf-name">—</td></tr>
+        <tr><td>File size</td><td id="inf-size">—</td></tr>
+        <tr><td>Native libraries</td><td id="inf-native">—</td></tr>
+        <tr><td>Has assets folder</td><td id="inf-assets">—</td></tr>
+        <tr><td>Confidence</td><td id="inf-conf">—</td></tr>
+      </table>
+    </div>
+
+    <!-- PERMISSIONS -->
+    <div class="section">
+      <div class="section-title">Permissions Detected</div>
+      <div class="perm-grid" id="perm-list"></div>
+    </div>
+
+    <!-- DANGEROUS PERMISSIONS -->
+    <div class="section" id="danger-section" style="display:none">
+      <div class="section-title">⚠ Dangerous Permissions</div>
+      <div class="perm-grid" id="danger-list"></div>
+    </div>
+
+    <button id="scan-again" onclick="resetUI()">↩ Scan Another APK</button>
+  </div>
+
+  <footer>Built by <span>Harsh Raj</span> · APK Shield v1.0 · ML-powered malware detection</footer>
+</div>
+
+<script>
+  const fileInput  = document.getElementById('file-input');
+  const dropZone   = document.getElementById('drop-zone');
+  const selFile    = document.getElementById('selected-file');
+  const selName    = document.getElementById('sel-name');
+  const selSize    = document.getElementById('sel-size');
+  const scanBtn    = document.getElementById('scan-btn');
+  const loading    = document.getElementById('loading');
+  const result     = document.getElementById('result');
+  let   currentFile = null;
+
+  // ── File select ──
+  fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+
+  // ── Drag & drop ──
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault(); dropZone.classList.remove('drag');
+    const f = e.dataTransfer.files[0];
+    if (f) handleFile(f);
+  });
+
+  function handleFile(f) {
+    if (!f || !f.name.toLowerCase().endsWith('.apk')) {
+      alert('Please select a valid .apk file.');
+      return;
+    }
+    currentFile = f;
+    selName.textContent = f.name;
+    selSize.textContent = f.size < 1024*1024
+      ? (f.size/1024).toFixed(1) + ' KB'
+      : (f.size/1024/1024).toFixed(2) + ' MB';
+    selFile.style.display = 'flex';
+    scanBtn.style.display  = 'block';
+    result.style.display   = 'none';
+  }
+
+  function clearFile() {
+    currentFile = null;
+    fileInput.value = '';
+    selFile.style.display = 'none';
+    scanBtn.style.display  = 'none';
+  }
+
+  // ── Loading steps animation ──
+  function animateSteps() {
+    const steps = ['s1','s2','s3','s4','s5'];
+    steps.forEach((id, i) => {
+      setTimeout(() => document.getElementById(id).classList.add('active'), i * 600);
+    });
+  }
+
+  // ── Scan ──
+  async function scanAPK() {
+    if (!currentFile) return;
+    scanBtn.disabled = true;
+    selFile.style.display = 'none';
+    scanBtn.style.display  = 'none';
+    loading.style.display  = 'block';
+    result.style.display   = 'none';
+    animateSteps();
+
+    const form = new FormData();
+    form.append('apk', currentFile);
+
+    try {
+      const res  = await fetch('/analyze', { method: 'POST', body: form });
+      const data = await res.json();
+      await new Promise(r => setTimeout(r, 3200)); // let animation finish
+      loading.style.display = 'none';
+      renderResult(data);
+    } catch(err) {
+      loading.style.display = 'none';
+      alert('Error analysing APK: ' + err.message);
+      resetUI();
+    }
+    scanBtn.disabled = false;
+  }
+
+  function renderResult(d) {
+    const isMalware = d.label === 'MALWARE';
+    const card = document.getElementById('verdict-card');
+    card.className = 'verdict-card ' + (isMalware ? 'malware' : 'benign');
+
+    document.getElementById('v-icon').textContent   = isMalware ? '☠' : '✅';
+    document.getElementById('v-label').textContent  = isMalware ? 'MALWARE' : 'BENIGN';
+    document.getElementById('v-sub').textContent    = `Confidence: ${d.confidence.toFixed(1)}%`;
+
+    // model note
+    document.getElementById('model-note').style.display     = d.model_used ? 'flex' : 'none';
+    document.getElementById('heuristic-note').style.display = d.model_used ? 'none' : 'flex';
+
+    // bars (animate after render)
+    setTimeout(() => {
+      document.getElementById('bar-benign').style.width   = d.benign_pct + '%';
+      document.getElementById('bar-malware').style.width  = d.malware_pct + '%';
+    }, 100);
+    document.getElementById('pct-benign').textContent  = d.benign_pct.toFixed(1) + '%';
+    document.getElementById('pct-malware').textContent = d.malware_pct.toFixed(1) + '%';
+
+    // risk badge
+    const rb = document.getElementById('risk-badge');
+    rb.textContent  = '⬤ ' + d.risk + ' Risk';
+    rb.className    = 'risk-badge risk-' + d.risk;
+
+    // stats
+    document.getElementById('stat-perms').textContent  = d.total_perms;
+    document.getElementById('stat-danger').textContent = d.dangerous.length;
+    document.getElementById('stat-files').textContent  = d.num_files;
+    document.getElementById('stat-dex').textContent    = d.num_dex;
+
+    // info table
+    document.getElementById('inf-name').textContent   = d.filename;
+    document.getElementById('inf-size').textContent   = d.file_size;
+    document.getElementById('inf-native').textContent = d.has_native ? '✓ Yes' : '✕ No';
+    document.getElementById('inf-assets').textContent = d.has_assets ? '✓ Yes' : '✕ No';
+    document.getElementById('inf-conf').textContent   = d.confidence.toFixed(2) + '%';
+
+    // permissions
+    const DANGEROUS = new Set(d.dangerous);
+    const permList  = document.getElementById('perm-list');
+    permList.innerHTML = d.permissions.length === 0
+      ? '<span class="perm-empty">No permissions detected</span>'
+      : d.permissions.map(p =>
+          `<span class="perm-pill ${DANGEROUS.has(p) ? 'perm-danger' : 'perm-safe'}">${p}</span>`
+        ).join('');
+
+    // dangerous
+    const dangerSec  = document.getElementById('danger-section');
+    const dangerList = document.getElementById('danger-list');
+    if (d.dangerous.length > 0) {
+      dangerSec.style.display = 'block';
+      dangerList.innerHTML = d.dangerous.map(p =>
+        `<span class="perm-pill perm-danger">⚠ ${p}</span>`
+      ).join('');
+    } else {
+      dangerSec.style.display = 'none';
+    }
+
+    result.style.display = 'block';
+  }
+
+  function resetUI() {
+    currentFile = null;
+    fileInput.value = '';
+    result.style.display   = 'none';
+    selFile.style.display  = 'none';
+    scanBtn.style.display  = 'none';
+    loading.style.display  = 'none';
+    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+    document.getElementById('bar-benign').style.width  = '0';
+    document.getElementById('bar-malware').style.width = '0';
+  }
+</script>
+</body>
+</html>
