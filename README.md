@@ -6,3 +6,7 @@ ML-powered Android malware detector with 93% accuracy.
 - Live demo: https://apk-shield-85v7.onrender.com
 
 Tech stack: Python, Flask, Scikit-learn, Render
+
+# Under the Guidance of 
+Asst. Prof Priti Kumari 
+Department of CSE, SCE Saharsa 
