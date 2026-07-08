@@ -20,11 +20,46 @@ Detect malicious Android APKs using Machine Learning and Static Analysis.
 
 # 📖 Overview
 
-APK Shield is a Machine Learning-powered Android malware detection platform that analyzes uploaded APK files using static feature extraction and predicts whether an application is **Benign** or **Malicious**.
+APK Shield is an intelligent **Machine Learning-powered Android Malware Detection System** designed to identify potentially malicious Android applications before they are installed. The platform performs **static analysis** on uploaded APK files by extracting security-related features from the application package and using a trained **Random Forest classifier** to determine whether the application is **Benign** or **Malicious**.
 
-The system extracts **34 security-related features**, feeds them into a trained **Random Forest classifier**, and presents an interactive analysis dashboard.
+Unlike traditional antivirus solutions that rely primarily on signature-based detection, APK Shield leverages machine learning to analyze application behavior patterns and permission-based characteristics. This enables the system to detect suspicious applications efficiently while providing users with an easy-to-understand security assessment.
+
+The application features a clean web interface built with **Flask**, allowing users to upload APK files, initiate analysis, and receive an interactive report containing the malware prediction, confidence score, detected permissions, and overall risk level.
 
 ---
+
+## 🎯 Project Objectives
+
+- Detect malicious Android applications using Machine Learning.
+- Perform static APK analysis without executing the application.
+- Extract meaningful security-related features from Android packages.
+- Classify applications using a trained Random Forest model.
+- Provide an interactive dashboard for easy malware analysis.
+- Demonstrate the practical application of Machine Learning in Cybersecurity.
+
+---
+
+## 💡 Why APK Shield?
+
+- 🛡️ Fast and lightweight static APK analysis
+- 🤖 Machine Learning-based malware detection
+- 📱 Android permission inspection
+- 📊 Interactive and user-friendly dashboard
+- ☁️ Fully deployed on Render
+- 📈 Built as a real-world cybersecurity and AI project
+
+---
+
+## 🔍 Key Capabilities
+
+- APK Upload & Validation
+- AndroidManifest.xml Analysis
+- 34 Security Feature Extraction
+- Random Forest Classification
+- Malware Probability Prediction
+- Risk Level Assessment
+- Permission Analysis
+- Responsive Web Interface
 
 # ✨ Features
 
