@@ -277,13 +277,10 @@ Contributions are welcome.
 ---
 
 # 👨‍💻 Team
-
 | Name | Role |
 |------|------|
-| Riya Raj | Frontend & Backend | Testing & Documentation |
-| Harsh Raj | Machine Learning |
-
-
+| **Harsh Raj** | Machine Learning, Model Training | 
+| **Riya Raj** | Frontend & Backend Development, Testing & Documentation |
 ---
 
 # 📜 License
